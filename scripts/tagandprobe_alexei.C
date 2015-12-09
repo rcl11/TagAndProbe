@@ -28,6 +28,7 @@ int tagandprobe() {
     //                      1. Extract the root file and the tree
     //--------------------------------------------------------------------------------------
     TFile *file = new TFile("../Trees081215/DYJetsToLL_M-50-LO_tpzmm_2015.root");
+    //TFile *file = new TFile("../Trees081215/SingleMuon-2015D_tpzmm_2015.root");
     TTree *tree = dynamic_cast<TTree*>(file->Get("ntuple"));
     
     //--------------------------------------------------------------------------------------
@@ -87,6 +88,7 @@ int tagandprobe() {
     //--------------------------------------------------------------------------------------
     //                      1.1 Create the histograms for storing the properties
     //--------------------------------------------------------------------------------------
+    TH1::SetDefaultSumw2(true);
     
     TH1F *id_pass=new TH1F("id_pass","",500,0,1000);
     TH1F *id_fail=new TH1F("id_fail","",500,0,1000);
@@ -119,7 +121,6 @@ int tagandprobe() {
         }
     }
     
-
 
     //--------------------------------------------------------------------------------------
     //                      1.3 Applying selection criteria - Tag/probe
