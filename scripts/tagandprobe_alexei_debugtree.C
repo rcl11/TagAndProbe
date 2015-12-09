@@ -1,0 +1,327 @@
+#include <iostream>
+#include <cmath>
+#include "TFile.h"
+#include "TTree.h"
+#include "TH1F.h"
+#include "TH1.h"
+#include "TF1.h"
+#include "TMinuit.h"
+#include "TCanvas.h"
+#include "TMath.h"
+#include "TStyle.h"
+#include "TAttAxis.h"
+#include "TFitResult.h"
+#include "TLatex.h"
+#include <fstream>
+#include <TSystem.h>
+#include "TLegend.h"
+#include "TGaxis.h"
+
+int tagandprobe() {
+    
+    double DeltaR(double eta_1, double phi_1, double eta_2, double phi_2) {
+        double deltaR=sqrt((eta_1-eta_2)*(eta_1-eta_2) + (phi_1-phi_2)*(phi_1-phi_2));
+        return deltaR;
+    }
+    
+    //--------------------------------------------------------------------------------------
+    //                      1. Extract the root file and the tree
+    //--------------------------------------------------------------------------------------
+    TFile *file = new TFile("../Trees081215/DYJetsToLL_M-50-LO_tpzmm_2015.root");
+    //TFile *file = new TFile("../Trees081215/SingleMuon-2015D_tpzmm_2015.root");
+    TTree *tree = dynamic_cast<TTree*>(file->Get("ntuple"));
+
+    TFile output_file("mumu_output_tree.root","RECREATE");
+    TTree output_tree("output_tree", "output_tree");
+    
+    //--------------------------------------------------------------------------------------
+    //                      1.1 Extract the properties of the particles
+    //--------------------------------------------------------------------------------------
+    double id_1, id_2, iso_1, iso_2;
+    int q_1, q_2;
+    bool trigger_match_1, trigger_match_2;
+    tree->SetBranchAddress("id_1",&id_1);
+    tree->SetBranchAddress("id_2",&id_2);
+    tree->SetBranchAddress("iso_1",&iso_1);
+    tree->SetBranchAddress("iso_2",&iso_2);
+    tree->SetBranchAddress("q_1",&q_1);
+    tree->SetBranchAddress("q_2",&q_2);
+    tree->SetBranchAddress("trigger_match_1",&trigger_match_1);
+    tree->SetBranchAddress("trigger_match_2",&trigger_match_2);
+    double pt_1,pt_2,E_1,E_2,eta_1,eta_2,phi_1,phi_2,m_vis,dxy_1,dxy_2,dz_1,dz_2;
+    tree->SetBranchAddress("pt_1", &pt_1);
+    tree->SetBranchAddress("pt_2", &pt_2);
+    tree->SetBranchAddress("E_1", &E_1);
+    tree->SetBranchAddress("E_2", &E_2);
+    tree->SetBranchAddress("eta_1", &eta_1);
+    tree->SetBranchAddress("eta_2", &eta_2);
+    tree->SetBranchAddress("phi_1", &phi_1);
+    tree->SetBranchAddress("phi_2", &phi_2);
+    tree->SetBranchAddress("m_vis", &m_vis);
+    tree->SetBranchAddress("dxy_1", &dxy_1);
+    tree->SetBranchAddress("dxy_2", &dxy_2);
+    tree->SetBranchAddress("dz_1", &dz_1);
+    tree->SetBranchAddress("dz_2", &dz_2);
+    double wt;
+    tree->SetBranchAddress("wt", &wt);
+    ULong64_t event;
+    tree->SetBranchAddress("event", &event);
+
+    bool os;
+    tree->SetBranchAddress("os", &os);
+    double pt_tag,pt_probe,E_tag,E_probe,eta_tag,eta_probe,phi_tag,phi_probe;
+    int q_tag, q_probe;
+
+    int nPtBins = 8;
+    double ptBins[9] = {10,13,16,20,25,30,40,60,10000};
+    int nEtaBins = 3;
+    float etaBins[4] = {0,0.9,1.2,2.4};
+    TString PtBins[8] = {"Pt10to13",
+                      "Pt13to16",
+                      "Pt16to20",
+                      "Pt20to25",
+                      "Pt25to30",
+                      "Pt30to40",
+                      "Pt40to60",
+                      "PtGt60"};
+
+    TString EtaBins[3] = {"EtaLt0p9",
+                       "Eta0p9to1p2",
+                       "EtaGt1p2"};
+    ULong64_t eventNumber;
+    int runNumber;
+    bool IsoM17, isMediumTag, isMediumProbe;
+    float ptTag, etaTag, phiTag, dxyTag, dzTag, ptProbe, etaProbe, phiProbe, dxyProbe, dzProbe, mass;
+    int chargeTag, chargeProbe;
+    
+    output_tree.Branch("eventNumber", &eventNumber);
+    output_tree.Branch("runNumber", &runNumber);
+    output_tree.Branch("IsoM17", &IsoM17);
+    output_tree.Branch("isMediumTag", &isMediumTag);
+    output_tree.Branch("isMediumProbe", &isMediumProbe);
+    output_tree.Branch("ptTag", &ptTag);
+    output_tree.Branch("etaTag", &etaTag);
+    output_tree.Branch("phiTag", &phiTag);
+    output_tree.Branch("dxyTag", &dxyTag);
+    output_tree.Branch("dzTag", &dzTag);
+    output_tree.Branch("ptProbe", &ptProbe);
+    output_tree.Branch("etaProbe", &etaProbe);
+    output_tree.Branch("phiProbe", &phiProbe);
+    output_tree.Branch("dxyProbe", &dxyProbe);
+    output_tree.Branch("dzProbe", &dzProbe);
+    output_tree.Branch("mass", &mass);
+    output_tree.Branch("chargeTag", &chargeTag);
+    output_tree.Branch("chargeProbe", &chargeProbe);
+
+
+    //--------------------------------------------------------------------------------------
+    //                      1.1 Create the histograms for storing the properties
+    //--------------------------------------------------------------------------------------
+    TH1::SetDefaultSumw2(true);
+    
+    TH1F *id_pass=new TH1F("id_pass","",500,0,1000);
+    TH1F *id_fail=new TH1F("id_fail","",500,0,1000);
+    TH1F *iso_pass=new TH1F("iso_pass","",500,0,1000);
+    TH1F *iso_fail=new TH1F("iso_fail","",500,0,1000);
+    TH1F *id_iso_pass=new TH1F("id_iso_pass","",800,0,1000);
+    TH1F *id_iso_fail=new TH1F("id_iso_fail","",800,0,1000);
+    
+    TH1F *id_iso_pass_1=new TH1F("id_iso_pass_1","",800,0,1000);
+    TH1F *id_iso_fail_1=new TH1F("id_iso_fail_1","",800,0,1000);
+    TH1F *id_iso_pass_2=new TH1F("id_iso_pass_2","",800,0,1000);
+    TH1F *id_iso_fail_2=new TH1F("id_iso_fail_2","",800,0,1000);
+    TH1F *id_iso_pass_3=new TH1F("id_iso_pass_3","",800,0,1000);
+    TH1F *id_iso_fail_3=new TH1F("id_iso_fail_3","",800,0,1000);
+    TH1F *id_iso_pass_4=new TH1F("id_iso_pass_4","",800,0,1000);
+    TH1F *id_iso_fail_4=new TH1F("id_iso_fail_4","",800,0,1000);
+
+//    TH1F *eta_tag=new TH1F("eta_tag","",100,-2.5,2.5);
+//    TH1F *eta_probe=new TH1F("eta_probe","",100,-2.5,2.5);
+    
+    // keep track of the statistic errors on the histogram, before filling
+    //m_vis_pass->Sumw2();
+    //m_vis_fail->Sumw2();
+    TH1F* ZMassEtaPtPass[3][9];
+    TH1F* ZMassEtaPtFail[3][9];
+    for (int iEta=0; iEta<nEtaBins; ++iEta) {
+        for (int iPt=0; iPt<nPtBins; ++iPt) {
+            ZMassEtaPtPass[iEta][iPt] = new TH1F("ZMass"+EtaBins[iEta]+PtBins[iPt]+"Pass","",80,50,130);
+            ZMassEtaPtFail[iEta][iPt] = new TH1F("ZMass"+EtaBins[iEta]+PtBins[iPt]+"Fail","",80,50,130);
+        }
+    }
+   
+
+
+    //--------------------------------------------------------------------------------------
+    //                      1.3 Applying selection criteria - Tag/probe
+    //--------------------------------------------------------------------------------------
+    for (int i = 0; i < tree->GetEntries(); ++i) {
+        bool fill_tree=false;
+        tree->GetEntry(i);
+        if(id_1>0.5 && iso_1<0.15 && pt_1>22 && fabs(eta_1)<2.1 && trigger_match_1 && fabs(dxy_1) < 0.045 && fabs(dz_1) < 0.2) {
+        //Here we apply the tag condition. This could be just id and iso, although Alexei applies some other things like high pt
+        //and eta cuts, possible dxy and dz cuts and trigger matching
+            // Candidate 1 is a valid tag
+            if(id_2>0.5 && iso_2<0.15 && pt_2>22 && fabs(eta_2)<2.1 && trigger_match_2 && fabs(dxy_2) < 0.045 && fabs(dz_2) < 0.2) {
+            // Candidate 2 is also a valid tag
+                //Here we check the pair is opposite sign. We also check they are well separated, using Delta R 
+                if(os && DeltaR(eta_1,phi_1,eta_2,phi_2)>0.5){
+                    // Candidate 1 is the tag
+                    if(fabs(dxy_2) < 0.2 && fabs(dz_2) < 0.5) {
+                        if(id_2>0.5 && iso_2<0.15) {
+                            //Passing probe events fill the passing histogram
+                            id_iso_pass->Fill(m_vis);
+                            //Separate events using the probe conditions
+                            for (int iEta=0; iEta<nEtaBins; ++iEta) {
+                                for (int iPt=0; iPt<nPtBins; ++iPt) {
+                                    if( fabs(eta_2) > etaBins[iEta] && fabs(eta_2) < etaBins[iEta+1] 
+                                        && pt_2 > ptBins[iPt] && pt_2 < ptBins[iPt+1]) {
+                                            ZMassEtaPtPass[iEta][iPt]->Fill(m_vis,wt);
+                                    }
+                                }
+                            }
+                        } else {
+                            //Failing probe events fill the failing histogram
+                            id_iso_fail->Fill(m_vis);
+                            //Save some info for the failing probes for syncing with Alexei    
+                            if(pt_2 > 40 && pt_2 < 60 && fabs(eta_2) > 0 && fabs(eta_2)<0.9 && m_vis>90 && m_vis<95){
+                                fill_tree = true;
+                                mass = m_vis;
+                                IsoM17 = trigger_match_1;
+                                isMediumTag = id_1>0.5;
+                                isMediumProbe = id_2>0.5;
+                                ptTag = pt_1;
+                                ptProbe = pt_2;
+                                etaTag = eta_1;
+                                etaProbe = eta_2;
+                                phiTag = phi_1;
+                                phiProbe = phi_2;
+                                dxyTag = dxy_1;
+                                dxyProbe = dxy_2;
+                                dzTag = dz_1;
+                                dzProbe = dz_2;
+                                chargeTag = q_1;
+                                chargeProbe = q_2;
+                                eventNumber = event;
+                            }
+                            for (int iEta=0; iEta<nEtaBins; ++iEta) {
+                                for (int iPt=0; iPt<nPtBins; ++iPt) {
+                                    if( fabs(eta_2) > etaBins[iEta] && fabs(eta_2) < etaBins[iEta+1] 
+                                        && pt_2 > ptBins[iPt] && pt_2 < ptBins[iPt+1]) {
+                                            ZMassEtaPtFail[iEta][iPt]->Fill(m_vis,wt);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Candidate 2 is the tag
+                    if (fabs(dxy_1) < 0.2 && fabs(dz_1) < 0.5) {
+                        if(id_1>0.5 && iso_1<0.15) {
+                            id_iso_pass->Fill(m_vis);
+                            for (int iEta=0; iEta<nEtaBins; ++iEta) {
+                                for (int iPt=0; iPt<nPtBins; ++iPt) {
+                                    if( fabs(eta_1) > etaBins[iEta] && fabs(eta_1) < etaBins[iEta+1] 
+                                        && pt_1 > ptBins[iPt] && pt_1 < ptBins[iPt+1]) {
+                                            ZMassEtaPtPass[iEta][iPt]->Fill(m_vis,wt);
+                                    }
+                                }
+                            }
+                        } else {
+                            id_iso_fail->Fill(m_vis);
+                            //Save some info for the failing probes for syncing with Alexei    
+                            if(pt_1 > 40 && pt_1 < 60 && fabs(eta_1) > 0 && fabs(eta_1)<0.9 && m_vis>90 && m_vis<95){
+                                fill_tree = true;
+                                mass = m_vis;
+                                IsoM17 = trigger_match_2;
+                                isMediumTag = id_2>0.5;
+                                isMediumProbe = id_1>0.5;
+                                ptTag = pt_2;
+                                ptProbe = pt_1;
+                                etaTag = eta_2;
+                                etaProbe = eta_1;
+                                phiTag = phi_2;
+                                phiProbe = phi_1;
+                                dxyTag = dxy_2;
+                                dxyProbe = dxy_1;
+                                dzTag = dz_2;
+                                dzProbe = dz_1;
+                                chargeTag = q_2;
+                                chargeProbe = q_1;
+                                eventNumber = event;
+                            }
+                            for (int iEta=0; iEta<nEtaBins; ++iEta) {
+                                for (int iPt=0; iPt<nPtBins; ++iPt) {
+                                    if( fabs(eta_1) > etaBins[iEta] && fabs(eta_1) < etaBins[iEta+1] 
+                                        && pt_1 > ptBins[iPt] && pt_1 < ptBins[iPt+1]) {
+                                            ZMassEtaPtFail[iEta][iPt]->Fill(m_vis,wt);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                //Candidate 1 is the tag, check conditions on candidate 2
+                if(os && DeltaR(eta_1,phi_1,eta_2,phi_2)>0.5){
+                    //Only use events where charge == 1 for the tag, even in events with only one tag
+                    if(fabs(dxy_2) < 0.2 && fabs(dz_2) < 0.5){    
+                        if(id_2>0.5 && iso_2<0.15) {
+                            id_iso_pass->Fill(m_vis);
+                            for (int iEta=0; iEta<nEtaBins; ++iEta) {
+                                for (int iPt=0; iPt<nPtBins; ++iPt) {
+                                    if( fabs(eta_2) > etaBins[iEta] && fabs(eta_2) < etaBins[iEta+1] 
+                                        && pt_2 > ptBins[iPt] && pt_2 < ptBins[iPt+1]) {
+                                            ZMassEtaPtPass[iEta][iPt]->Fill(m_vis,wt);
+                                    }
+                                }
+                            }
+                        } else {
+                            id_iso_fail->Fill(m_vis);
+                            //Save some info for the failing probes for syncing with Alexei    
+                            if(pt_2 > 40 && pt_2 < 60 && fabs(eta_2) > 0 && fabs(eta_2)<0.9 && m_vis>90 && m_vis<95){
+                                fill_tree = true;
+                                mass = m_vis;
+                                IsoM17 = trigger_match_1;
+                                isMediumTag = id_1>0.5;
+                                isMediumProbe = id_2>0.5;
+                                ptTag = pt_1;
+                                ptProbe = pt_2;
+                                etaTag = eta_1;
+                                etaProbe = eta_2;
+                                phiTag = phi_1;
+                                phiProbe = phi_2;
+                                dxyTag = dxy_1;
+                                dxyProbe = dxy_2;
+                                dzTag = dz_1;
+                                dzProbe = dz_2;
+                                chargeTag = q_1;
+                                chargeProbe = q_2;
+                                eventNumber = event;
+                            }
+                            for (int iEta=0; iEta<nEtaBins; ++iEta) {
+                                for (int iPt=0; iPt<nPtBins; ++iPt) {
+                                    if( fabs(eta_2) > etaBins[iEta] && fabs(eta_2) < etaBins[iEta+1] 
+                                        && pt_2 > ptBins[iPt] && pt_2 < ptBins[iPt+1]) {
+                                            ZMassEtaPtFail[iEta][iPt]->Fill(m_vis,wt);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if(fill_tree) output_tree.Fill();
+    }
+    output_file.cd();
+    output_tree.Write();
+    TFile* file0=new TFile("muonIDIso_alexei.root","RECREATE");
+    
+    for (int iEta=0; iEta<nEtaBins; ++iEta) {
+        for (int iPt=0; iPt<nPtBins; ++iPt) {
+            ZMassEtaPtPass[iEta][iPt]->Write();
+            ZMassEtaPtFail[iEta][iPt]->Write();
+        }
+    }
+    return 0;
+}
