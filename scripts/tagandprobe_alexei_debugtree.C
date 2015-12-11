@@ -156,9 +156,11 @@ int tagandprobe() {
     //                      1.3 Applying selection criteria - Tag/probe
     //--------------------------------------------------------------------------------------
     for (int i = 0; i < tree->GetEntries(); ++i) {
+        if(event==8322607) std::cout << "position 1" << std::endl;
         bool fill_tree=false;
         tree->GetEntry(i);
         if(id_1>0.5 && iso_1<0.15 && pt_1>22 && fabs(eta_1)<2.1 && trigger_match_1 && fabs(dxy_1) < 0.045 && fabs(dz_1) < 0.2) {
+        if(event==8322607) std::cout << "position 2" << std::endl;
         //Here we apply the tag condition. This could be just id and iso, although Alexei applies some other things like high pt
         //and eta cuts, possible dxy and dz cuts and trigger matching
             // Candidate 1 is a valid tag
@@ -171,6 +173,7 @@ int tagandprobe() {
                         if(id_2>0.5 && iso_2<0.15) {
                             //Passing probe events fill the passing histogram
                             id_iso_pass->Fill(m_vis);
+                            if(event==1044096) std::cout << "position 1" << std::endl;
                             //Separate events using the probe conditions
                             for (int iEta=0; iEta<nEtaBins; ++iEta) {
                                 for (int iPt=0; iPt<nPtBins; ++iPt) {
@@ -183,6 +186,7 @@ int tagandprobe() {
                         } else {
                             //Failing probe events fill the failing histogram
                             id_iso_fail->Fill(m_vis);
+                            if(event==1044096) std::cout << "position 1" << std::endl;
                             //Save some info for the failing probes for syncing with Alexei    
                             if(pt_2 > 40 && pt_2 < 60 && fabs(eta_2) > 0 && fabs(eta_2)<0.9 && m_vis>90 && m_vis<95){
                                 fill_tree = true;
@@ -217,6 +221,7 @@ int tagandprobe() {
                     // Candidate 2 is the tag
                     if (fabs(dxy_1) < 0.2 && fabs(dz_1) < 0.5) {
                         if(id_1>0.5 && iso_1<0.15) {
+                            if(event==1044096) std::cout << "position 1" << std::endl;
                             id_iso_pass->Fill(m_vis);
                             for (int iEta=0; iEta<nEtaBins; ++iEta) {
                                 for (int iPt=0; iPt<nPtBins; ++iPt) {
@@ -228,6 +233,7 @@ int tagandprobe() {
                             }
                         } else {
                             id_iso_fail->Fill(m_vis);
+                            if(event==1044096) std::cout << "position 1" << std::endl;
                             //Save some info for the failing probes for syncing with Alexei    
                             if(pt_1 > 40 && pt_1 < 60 && fabs(eta_1) > 0 && fabs(eta_1)<0.9 && m_vis>90 && m_vis<95){
                                 fill_tree = true;
@@ -266,6 +272,7 @@ int tagandprobe() {
                     //Only use events where charge == 1 for the tag, even in events with only one tag
                     if(fabs(dxy_2) < 0.2 && fabs(dz_2) < 0.5){    
                         if(id_2>0.5 && iso_2<0.15) {
+                            if(event==1044096) std::cout << "position 1" << std::endl;
                             id_iso_pass->Fill(m_vis);
                             for (int iEta=0; iEta<nEtaBins; ++iEta) {
                                 for (int iPt=0; iPt<nPtBins; ++iPt) {
@@ -276,6 +283,7 @@ int tagandprobe() {
                                 }
                             }
                         } else {
+                            if(event==1044096) std::cout << "position 1" << std::endl;
                             id_iso_fail->Fill(m_vis);
                             //Save some info for the failing probes for syncing with Alexei    
                             if(pt_2 > 40 && pt_2 < 60 && fabs(eta_2) > 0 && fabs(eta_2)<0.9 && m_vis>90 && m_vis<95){
@@ -304,6 +312,40 @@ int tagandprobe() {
                                         && pt_2 > ptBins[iPt] && pt_2 < ptBins[iPt+1]) {
                                             ZMassEtaPtFail[iEta][iPt]->Fill(m_vis,wt);
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else if(id_2>0.5 && iso_2<0.15 && pt_2>22 && fabs(eta_2)<2.1 && trigger_match_2 && fabs(dxy_2) < 0.045 && fabs(dz_2) < 0.2) {
+        // Candidate 2 is the tag, candidate 1 cannot be
+            if(os && DeltaR(eta_1,phi_1,eta_2,phi_2)>0.5){
+                // Candidate 1 is the probe
+                if(fabs(dxy_1) < 0.2 && fabs(dz_1) < 0.5) {
+                    if(id_1>0.5 && iso_1<0.15) {
+                        //Passing probe events fill the passing histogram
+                        id_iso_pass->Fill(m_vis);
+                        //Separate events using the probe conditions
+                        for (int iEta=0; iEta<nEtaBins; ++iEta) {
+                            for (int iPt=0; iPt<nPtBins; ++iPt) {
+                                if( fabs(eta_1) > etaBins[iEta] && fabs(eta_1) < etaBins[iEta+1] 
+                                    && pt_1 > ptBins[iPt] && pt_1 < ptBins[iPt+1]) {
+                                        ZMassEtaPtPass[iEta][iPt]->Fill(m_vis,wt);
+                                }
+                            }
+                        }
+                    } else {
+                        //Failing probe events fill the failing histogram
+                        id_iso_fail->Fill(m_vis);
+                        if(event==1044096) std::cout << "position 1" << std::endl;
+                        //Save some info for the failing probes for syncing with Alexei    
+                        for (int iEta=0; iEta<nEtaBins; ++iEta) {
+                            for (int iPt=0; iPt<nPtBins; ++iPt) {
+                                if( fabs(eta_2) > etaBins[iEta] && fabs(eta_2) < etaBins[iEta+1] 
+                                    && pt_2 > ptBins[iPt] && pt_2 < ptBins[iPt+1]) {
+                                        ZMassEtaPtFail[iEta][iPt]->Fill(m_vis,wt);
                                 }
                             }
                         }
