@@ -343,8 +343,8 @@ int tagandprobe() {
                         //Save some info for the failing probes for syncing with Alexei    
                         for (int iEta=0; iEta<nEtaBins; ++iEta) {
                             for (int iPt=0; iPt<nPtBins; ++iPt) {
-                                if( fabs(eta_2) > etaBins[iEta] && fabs(eta_2) < etaBins[iEta+1] 
-                                    && pt_2 > ptBins[iPt] && pt_2 < ptBins[iPt+1]) {
+                                if( fabs(eta_1) > etaBins[iEta] && fabs(eta_1) < etaBins[iEta+1] 
+                                    && pt_1 > ptBins[iPt] && pt_1 < ptBins[iPt+1]) {
                                         ZMassEtaPtFail[iEta][iPt]->Fill(m_vis,wt);
                                 }
                             }
